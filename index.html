@@ -1,0 +1,193 @@
+<!doctype html>
+<!-- index.html -->
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <link rel="stylesheet" href="/styles.css">
+
+  <title>Reactor Rush — physics arcade web game</title>
+  <meta name="description"
+        content="Tilt the control rod, keep the chain reaction alive, and chase combos in a fast, skill-based physics arcade game. Daily Challenge, Practice mode, color-blind palette, and zero installs." />
+  <link rel="canonical" href="https://reactorrush.com/" />
+
+  <link rel="icon" href="/icons/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/icons/icon-192.png" sizes="192x192">
+  <link rel="mobile-touch-icon" href="/icons/apple-touch-icon.png" />
+  <meta name="theme-color" content="#0e1626" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Reactor Rush" />
+  <meta property="og:url" content="https://reactorrush.com/" />
+  <meta property="og:title" content="Reactor Rush — physics arcade web game" />
+  <meta property="og:description"
+        content="Tilt the control rod, keep the chain reaction alive, and chase combos. Try today's Daily Challenge!" />
+  <meta property="og:image" content="https://reactorrush.com/og/og-image.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Reactor Rush — physics arcade web game" />
+  <meta name="twitter:description"
+        content="Skill-based tilt-and-collect action + Daily Challenge. Play free in your browser." />
+  <meta name="twitter:image" content="https://reactorrush.com/og/og-image.jpg" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="mobile-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <link rel="alternate" href="https://reactorrush.com/" hreflang="en" />
+
+  <!-- Minimal performance hints (only if you actually use these assets) -->
+  <link rel="preload" href="/og/og-image.jpg" as="image" fetchpriority="low">
+
+  <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Reactor Rush",
+        "url": "https://reactorrush.com/",
+        "image": "https://reactorrush.com/og/og-image.jpg",
+        "description": "Tilt the control rod to keep the chain reaction alive in a fast, skill-based physics arcade web game. Daily Challenge and Practice mode included.",
+        "genre": ["Arcade", "Physics", "Skill"],
+        "playMode": "SinglePlayer",
+        "inLanguage": "en",
+        "applicationCategory": "Game",
+        "operatingSystem": "Web",
+        "gamePlatform": "WebBrowser",
+        "publisher": {
+            "@type": "Organization",
+            "name": "Reactor Rush",
+            "url": "https://reactorrush.com/"
+        },
+        "potentialAction": {
+            "@type": "PlayAction",
+            "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://reactorrush.com/"
+            }
+        }
+    }
+    </script>
+
+    <script type="application/ld+json">
+        {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Reactor Rush",
+        "url": "https://reactorrush.com/",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://reactorrush.com/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+        }
+    </script>
+
+</head>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-QPRHDRBZH4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-QPRHDRBZH4');
+</script>
+
+<body>
+    <h1>⚛️Reactor Rush</h1>
+  <div class="shell">
+    <aside class="side left">
+      <h2>How to Play</h2>
+      <ul>
+        <li>Click/tap inside the game area to start.</li>
+        <li>Hold ◀/▶ (or bottom left/right) to tilt the control rod.</li>
+        <li>The <strong>neutron (ball)</strong> always wants to go up.</li>
+        <li>Collect <strong>nuclei</strong> & <strong>photons</strong> for points.</li>
+        <li>Green <strong>fuel pellets</strong> heal one health block.</li>
+        <li>Build combos to reach <strong>CRITICAL</strong> (x5)!</li>
+        <li>Press <strong>P</strong> for the pause menu, <strong>M</strong> to mute.</li>
+      </ul>
+    </aside>
+
+    <main class="stage" id="stage">
+      <canvas id="game"></canvas>
+
+      <!-- Pause / Options Modal -->
+      <div id="pauseModal" class="modal">
+        <div class="panel">
+          <h3>Paused — Options</h3>
+
+          <div class="opt check">
+            <div>Sound effects</div>
+            <label class="check"><input id="optSound" type="checkbox" checked> <span>On</span></label>
+          </div>
+
+          <div class="opt check">
+            <div>Reduce motion (less shake/particles)</div>
+            <label class="check"><input id="optReduce" type="checkbox"> <span>On</span></label>
+          </div>
+
+          <div class="opt check">
+            <div>Show controls hint</div>
+            <label class="check"><input id="optHint" type="checkbox" checked> <span>On</span></label>
+          </div>
+
+          <div class="opt check">
+            <div>Color-blind palette</div>
+            <label class="check"><input id="optCB" type="checkbox"> <span>On</span></label>
+          </div>
+
+          <div class="row" style="justify-content:space-between; margin-top:10px;">
+            <button id="resumeBtn" class="btn">Resume (P)</button>
+            <button id="restartBtn" class="btn secondary">Restart (R)</button>
+            <button id="sharePauseBtn" class="btn secondary">Share Score</button>
+          </div>
+
+          <div class="row" style="justify-content:flex-end; margin-top:6px;">
+            <button id="optResetHigh" class="btn secondary">Reset High Score</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Over / Challenge Complete overlay -->
+      <div id="goOverlay" class="goOverlay">
+        <div class="goShareWrap">
+          <div id="goTitle" class="goTitle">Run complete!</div>
+          <div id="goStats" class="goStats"></div>
+          <div class="row center">
+            <span class="btnWrap">
+              <button id="goShareBtn" class="goBtn">Share</button>
+              <!-- Absolutely positioned tooltip (no layout shift) -->
+              <span id="goCopied" class="copiedTip" role="status" aria-live="polite">Copied!</span>
+            </span>
+            <button id="goRestartBtn" class="goBtn secondary">Restart</button>
+          </div>
+          <div class="goNote">Tip: press P to pause/options</div>
+        </div>
+      </div>
+
+      <!-- Mobile touch zones -->
+      <div id="zones" aria-hidden="true">
+        <div id="zoneL" class="zone left" data-label="◀ hold"></div>
+        <div id="zoneR" class="zone right" data-label="hold ▶"></div>
+      </div>
+    </main>
+
+    <aside class="side right">
+      <h2>Gameplay</h2>
+      <div class="row">
+        <button id="normalBtn"   class="btn secondary">Normal Mode</button>
+        <button id="practiceBtn" class="btn">Practice Mode</button>
+        <button id="dailyBtn"    class="btn">Daily Challenge</button>
+      </div>
+    </aside>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
