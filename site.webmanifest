@@ -1,6 +1,6 @@
 {
-  "name": "Reactor Rush",
-  "short_name": "ReactorRush",
+  "name": "ReactoRush",
+  "short_name": "ReactoRush",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a1322",
