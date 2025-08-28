@@ -1,11 +1,11 @@
 :root { --side-w: 25vw; --stage-w: 50vw; }
 * { box-sizing: border-box; }
 html, body { overflow: hidden; height: 100%; margin: 0; background: #0b0f18; color: #e8ecff; font-family: system-ui, ui-sans-serif, Segoe UI, Roboto, Helvetica, Arial; }
-h1 { display:flex; justify-content: center; padding:0; margin:0;}
+h1 { display:flex; justify-content: center; align-items:center; gap:0.5rem; padding:0; margin:0;}
 .shell { display: grid; grid-template-columns: var(--side-w) var(--stage-w) var(--side-w); width: 100vw; min-height: 100vh; }
 .side { padding: 16px; color: #c7d2ff; }
 .side h2 { margin: 12px 0 8px; font-size: 14px; color: #9fb0ff; letter-spacing: .02em; }
-.side p, .side li, .side label { font-size: 13px; line-height: 1.4; color: #c7d2ff; }
+.side p, .side li, .side label { font-size: 13px; line-height: 1.4; color: #c7d2ff; user-select: none; }
 
 .btn { display:inline-block; padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:#11162a; color:#d9e3ff; cursor:pointer; margin:6px 0; font-size:13px; }
 .btn.secondary { background:#0e1426; }
@@ -33,7 +33,7 @@ h1 { display:flex; justify-content: center; padding:0; margin:0;}
 
 /* Mobile touch zones */
 #zones { position: absolute; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; pointer-events: auto; }
-.zone { position: absolute; bottom: 0; height: 20vh; width: 50%; pointer-events: auto; }
+.zone { position: absolute; bottom: 0; height: 20vh; width: 50%; pointer-events: auto; user-select: none; }
 .zone.left { left: 0; }
 .zone.right { right: 0; }
 .zone::after { content: attr(data-label); position: absolute; left: 50%; top: 6px; transform: translateX(-50%); font-size: 12px; color: rgba(255,255,255,0.35); }
@@ -48,8 +48,8 @@ h1 { display:flex; justify-content: center; padding:0; margin:0;}
 .goBtn.secondary { background:#162044; }
 
 /* Absolutely positioned tooltip anchored to the Share button */
-.btnWrap { position: relative; display: inline-block; }
-.copiedTip {
+.btnWrap, .btn-wrap { position: relative; display: inline-block; }
+.copiedTip, .copied-tip {
   position: absolute;
   top: -8px;
   left: 50%;
@@ -66,7 +66,7 @@ h1 { display:flex; justify-content: center; padding:0; margin:0;}
   font-size: 12px;
   transition: opacity .15s ease, transform .15s ease;
 }
-.copiedTip.show { opacity: 1; transform: translate(-50%, -120%); }
+.copiedTip.show, .copied-tip.show { opacity: 1; transform: translate(-50%, -120%); }
 
 .goNote { font-size:12px; opacity:0.8; color:#c7d2ff; }
 
@@ -74,4 +74,54 @@ h1 { display:flex; justify-content: center; padding:0; margin:0;}
   :root { --side-w: 0; --stage-w: 100vw; }
   .side { display: none; }
   .shell { grid-template-columns: var(--stage-w); }
+}
+
+/* Pause/Options: mode button group */
+#modeGroupPause {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#modeGroupPause .btn {
+  min-width: 120px;
+}
+
+/* Selected vs secondary (fallback if you haven’t defined them) */
+.btn.selected   { background: #4e5fff; color: #fff; border: none; transition: background ease 200ms; }
+.btn.selected:hover   { background: #3d50ff;}
+.btn.secondary  { background: rgba(255,255,255,0.08); color: #e8ecff; border: 1px solid rgba(255,255,255,0.15); transition: background ease 200ms; }
+.btn.secondary:hover  { background: rgba(124, 74, 74, 0.08); }
+
+/* Optional: hide the right sidebar on small screens */
+@media (max-width: 900px) {
+  #sidebar, .sidebar { display: none; }
+}
+
+/* Cards/links (reuse your existing style if you have one) */
+.card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px; padding: 10px; }
+.card h3 { margin: 0 0 8px; font: 600 14px system-ui; }
+.card .countdown { font: 500 14px/1.4 system-ui; color: #e8ecff; }
+.card .link { display: inline-block; margin-top: 8px; color: #b9f3ff; text-decoration: none; }
+.card .link:hover { text-decoration: underline; }
+
+/* Mobile-only container (hidden on desktop) */
+.mobile-only { display: none; margin: 12px 0 0; }
+
+/* If you hide sidebars <=900px, show the mobile block */
+@media (max-width: 900px) {
+  .mobile-only { display: block; }
+}
+
+:root[data-reduce-motion="1"] *,
+:root[data-reduce-motion="1"] *::before,
+:root[data-reduce-motion="1"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.dc-number {
+  margin: 6px 0 8px;
+  font: 600 14px system-ui, sans-serif;
+  color: #e8ecff;
 }

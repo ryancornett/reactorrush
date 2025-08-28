@@ -43,6 +43,9 @@
   <!-- Minimal performance hints (only if you actually use these assets) -->
   <link rel="preload" href="/og/og-image.jpg" as="image" fetchpriority="low">
 
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
+
   <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -99,19 +102,17 @@
 </script>
 
 <body>
-    <h1>⚛️ReactoRush</h1>
+    <h1><sl-icon name="radioactive"></sl-icon>ReactoRush</h1>
   <div class="shell">
     <aside class="side left">
-      <h2>How to Play</h2>
-      <ul>
-        <li>Click/tap inside the game area to start.</li>
-        <li>Hold ◀/▶ (or bottom left/right) to tilt the control rod.</li>
-        <li>The <strong>neutron (ball)</strong> always wants to go up.</li>
-        <li>Collect <strong>nuclei</strong> & <strong>photons</strong> for points.</li>
-        <li>Green <strong>fuel pellets</strong> heal one health block.</li>
-        <li>Build combos to reach <strong>CRITICAL</strong> (x5)!</li>
-        <li>Press <strong>P</strong> for the pause menu, <strong>M</strong> to mute.</li>
-      </ul>
+      <!-- Left rail: Daily + Feedback -->
+      <section class="card" id="dailyCard">
+        <div class="dc-number">Daily Challenge #<span id="dailyNumber">—</span></div>
+        <div class="countdown" aria-live="polite">
+          New Daily in <span id="dailyCountdown">--:--:--</span>
+        </div>
+        <a id="feedbackLink" class="link" href="https://forms.gle/YOUR_FORM_ID" target="_blank" rel="noopener">Send feedback ↗</a>
+      </section>
     </aside>
 
     <main class="stage" id="stage">
@@ -121,6 +122,16 @@
       <div id="pauseModal" class="modal">
         <div class="panel">
           <h3>Paused — Options</h3>
+
+          <!-- Pause/Options: Modes (mobile-friendly) -->
+          <div class="modal-section">
+            <h3>Modes</h3>
+            <div class="btn-group" id="modeGroupPause">
+              <button id="normalBtnP"   class="btn secondary" aria-pressed="false">Normal</button>
+              <button id="practiceBtnP" class="btn secondary" aria-pressed="false">Practice</button>
+              <button id="dailyBtnP"    class="btn secondary" aria-pressed="false">Daily Challenge</button>
+            </div>
+          </div>
 
           <div class="opt check">
             <div>Sound effects</div>
@@ -143,9 +154,12 @@
           </div>
 
           <div class="row" style="justify-content:space-between; margin-top:10px;">
-            <button id="resumeBtn" class="btn">Resume (P)</button>
+            <button id="resumeBtn" class="btn secondary">Resume (P)</button>
             <button id="restartBtn" class="btn secondary">Restart (R)</button>
-            <button id="sharePauseBtn" class="btn secondary">Share Score</button>
+            <div class="btn-wrap">
+              <button id="sharePauseBtn" class="btn secondary">Share score</button>
+              <span id="pauseCopied" class="copied-tip" aria-hidden="true">Copied!</span>
+            </div>
           </div>
 
           <div class="row" style="justify-content:flex-end; margin-top:6px;">
@@ -179,13 +193,28 @@
     </main>
 
     <aside class="side right">
-      <h2>Gameplay</h2>
-      <div class="row">
-        <button id="normalBtn"   class="btn secondary">Normal Mode</button>
-        <button id="practiceBtn" class="btn">Practice Mode</button>
-        <button id="dailyBtn"    class="btn">Daily Challenge</button>
-      </div>
+      <h2>How to Play</h2>
+      <ul>
+        <li>Click/tap inside the game area to start.</li>
+        <li>Hold ◀/▶ (or bottom left/right) to tilt the control rod.</li>
+        <li>The <strong>neutron (ball)</strong> wants to go up, but momentum may cause a delay.</li>
+        <li>Collect <strong>nuclei</strong> & <strong>photons</strong> for points.</li>
+        <li>Green <strong>fuel pellets</strong> heal one health block.</li>
+        <li>Build combos to reach <strong>CRITICAL</strong> (x5)!</li>
+        <li>Press <strong>P</strong> for the pause menu, <strong>M</strong> to mute.</li>
+      </ul>
     </aside>
+  </div>
+
+  <!-- Mobile-only Daily + Feedback (shows when sidebars are hidden) -->
+  <div id="belowCanvas" class="mobile-only">
+    <div class="card">
+      <div class="countdown" aria-live="polite">
+        <div class="dc-number">Daily Challenge #<span id="dailyNumberMobile">—</span></div>
+        New Daily in <span id="dailyCountdownMobile">--:--:--</span>
+      </div>
+      <a id="feedbackLinkMobile" class="link" href="https://docs.google.com/forms/d/15tmfye6Ra7GBAoHCVuTCNYh9vV35ZxziT97EgejOPkI" target="_blank" rel="noopener">Send feedback ↗</a>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>

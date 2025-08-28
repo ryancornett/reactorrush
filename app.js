@@ -1,7 +1,7 @@
 // Reactor Rush — v19g (fix: no bare `h` locals; daily start & audio intact)
 const LS_HS = 'reactorRushHighScore';
 const LS_SETTINGS = 'reactorRushSettings';
-const SHARE_URL = 'https://reactorrush.com';
+const SHARE_URL = 'https://reactorush.com';
 
 const canvas = document.getElementById('game');
 const stageEl = document.getElementById('stage');
@@ -72,6 +72,14 @@ function computeNextLevelScore(level) {
   return lastEnd;
 }
 
+// Touch detection (used for mobile-specific UX)
+const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+// Pause-menu mode buttons (new)
+const normalBtnP   = document.getElementById('normalBtnP');
+const practiceBtnP = document.getElementById('practiceBtnP');
+const dailyBtnP    = document.getElementById('dailyBtnP');
+
 // Resets High Score
 optResetHigh?.addEventListener('click', () => {
   if (!confirm('Reset high score?')) return;
@@ -112,7 +120,6 @@ document.addEventListener('click', (e) => {
     case 'sharePauseBtn':
       e.preventDefault();
       doShareClipboard();
-      flashToast('Copied!', pauseModal);
       break;
   }
 });
@@ -125,7 +132,12 @@ goRestartBtn?.addEventListener('click', (e) => {
   e.preventDefault();
   if (!state.running) resetGame();
 });
+const pauseCopied = document.getElementById('pauseCopied');
 
+sharePauseBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  doShareClipboard(pauseCopied);
+});
 
 // RNG (daily challenge)
 function hash32(str) { // FNV-1a 32-bit
@@ -199,31 +211,45 @@ optHint?.addEventListener('change', () => {
 });
 
 function updateModeButtons() {
-  const buttonMap = {
-    normal:  normalBtn || document.querySelector('#normalBtn,[data-mode="normal"]'),
-    practice: practiceBtn || document.querySelector('#practiceBtn,[data-mode="practice"]'),
-    daily:   dailyBtn || document.querySelector('#dailyBtn,[data-mode="daily"]')
+  const map = {
+    normal:  [normalBtn,  normalBtnP].filter(Boolean),
+    practice:[practiceBtn,practiceBtnP].filter(Boolean),
+    daily:   [dailyBtn,   dailyBtnP].filter(Boolean)
   };
-
-  const all = Object.values(buttonMap).filter(Boolean);
-  const selected = buttonMap[state.mode];
+  const all = [...map.normal, ...map.practice, ...map.daily];
 
   for (const b of all) {
-    b.classList.toggle('selected', b === selected);
-    b.classList.toggle('secondary', b !== selected);
-    // Also reflect selection in ARIA for good measure
-    b.setAttribute('aria-pressed', b === selected ? 'true' : 'false');
+    const isSel = (b === (map[state.mode][0] || b)) || b.textContent.toLowerCase().includes(state.mode);
+    b.classList.toggle('selected',  b.textContent && b.textContent.toLowerCase().includes(state.mode));
+    b.classList.toggle('secondary', !b.classList.contains('selected'));
+    b.setAttribute('aria-pressed', b.classList.contains('selected') ? 'true' : 'false');
   }
 }
 
 function loadSettings() {
   try {
-    const s = JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}');
-    Object.assign(state.settings, s);
-    optSound.checked = !!state.settings.sound; optReduce.checked = !!state.settings.reduceMotion; optHint.checked = !!state.settings.showHint; optCB.checked = !!state.settings.cb;
-    applyPalette(state.settings.cb); setFpsButtons(); setHint(); updateModeButtons();
+    const stored = JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}');
+
+    // Default: follow system ONLY when user has no saved choice
+    let reduce = stored.hasOwnProperty('reduceMotion')
+      ? !!stored.reduceMotion
+      : window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    Object.assign(state.settings, stored, { reduceMotion: reduce });
+
+    // Wire UI
+    if (optSound)  optSound.checked  = !!state.settings.sound;
+    if (optReduce) optReduce.checked = !!state.settings.reduceMotion;
+    if (optHint)   optHint.checked   = !!state.settings.showHint;
+    if (optCB)     optCB.checked     = !!state.settings.cb;
+
+    applyPalette(state.settings.cb);
+    setHint();
+    applyReduceMotion();  // <-- ensure DOM/CSS reflects the choice
+    updateModeButtons();
   } catch {}
 }
+
 function saveSettings() { try { localStorage.setItem(LS_SETTINGS, JSON.stringify(state.settings)); } catch {} }
 function loadHigh() { try { const v = localStorage.getItem(LS_HS); const n = v ? parseInt(v, 10) : 0; state.highScore = (Number.isFinite(n) && n > 0) ? n : 0; } catch { state.highScore = 0; } }
 function saveHigh() { try { localStorage.setItem(LS_HS, String(state.highScore)); } catch {} }
@@ -316,7 +342,24 @@ bindZone(zoneR, v => state.input.right = v);
 
 // Start gate
 function startGame() { state.started = true; ensureAudio(); resetGame(); try { window.focus(); } catch {} }
-canvas.addEventListener('pointerdown', (e) => { const y = e.offsetY; if (!state.started && y < topH + midH) { startGame(); } });
+canvas.addEventListener('pointerdown', (e) => {
+  const y = e.offsetY;
+  const inPlayfield = y < (topH + midH);
+
+  // Start the first run by tapping/clicking the playfield
+  if (!state.started && inPlayfield) { startGame(); return; }
+
+  // Mobile-only: tap playfield to pause during play
+  if (state.started && state.running && !state.paused && inPlayfield) {
+    togglePause(true);
+  }
+});
+
+// Mobile pause menu modes
+normalBtnP?.addEventListener('click', (e) => { e.preventDefault(); startMode('normal'); });
+practiceBtnP?.addEventListener('click', (e) => { e.preventDefault(); startMode('practice'); });
+dailyBtnP?.addEventListener('click', (e) => { e.preventDefault(); startMode('daily'); });
+
 
 // Modes
 // ---------- Sidebar actions (modes) ----------
@@ -374,6 +417,28 @@ function spawnCollectible() {
   const x = clamp(xMin + rng() * Math.max(0, (xMax - xMin)), xMin, xMax);
   const y = -20; state.collectibles.push({ type: kind, x, y, r, score: kind.score });
 }
+
+function applyReduceMotion() {
+  // Reflect in DOM for any CSS hooks
+  document.documentElement.setAttribute(
+    'data-reduce-motion',
+    state.settings.reduceMotion ? '1' : '0'
+  );
+
+  // If we just turned RM on, stop shakes/particles immediately
+  if (state.settings.reduceMotion) {
+    state.fx.shake.t = 0;
+    state.fx.particles.length = 0;
+  }
+}
+
+optReduce?.addEventListener('change', () => {
+  state.settings.reduceMotion = !!optReduce.checked;
+  saveSettings();
+  applyReduceMotion();
+});
+
+
 function addRing(x, y, color) { state.fx.rings.push({ x, y, r: 4, dr: 240, alpha: 0.8, color }); }
 function burst(x, y, color, count = 16, spd = 180) {
   const c = state.settings.reduceMotion ? Math.ceil(count * 0.5) : count;
@@ -402,14 +467,31 @@ function flashToast(text, container = document.body) {
   setTimeout(() => { try { container.removeChild(t); } catch {} }, 1200);
 }
 
-// Drawing helpers (renamed h to hgt where used)
-function withShake(fn) {
-  if (state.fx.shake.t > 0) {
-    const s = state.fx.shake; const k = (s.t / 0.2); const mag = s.mag * k * 0.6;
-    const ox = (Math.random() * 2 - 1) * mag; const oy = (Math.random() * 2 - 1) * mag;
-    ctx.save(); ctx.translate(ox, oy); fn(); ctx.restore();
-  } else fn();
+// Draw-time shake only. Never reads/writes game state except state.fx.shake.
+// Never affects timing/spawn/update.
+function withShake(cb) {
+  if (typeof cb !== 'function') return;
+
+  const s = state.fx?.shake || { t: 0, mag: 0 };
+  const reduce = !!state.settings?.reduceMotion;
+  if (reduce || s.t <= 0) {
+    cb();                      // no shake -> just draw
+    return;
+  }
+
+  // short, bounded shake
+  const DUR = 0.25;                           // visual decay window
+  const f = Math.max(0, Math.min(1, s.t / DUR));
+  const mag = s.mag * f * 0.6;
+
+  const ox = (Math.random() * 2 - 1) * mag;
+  const oy = (Math.random() * 2 - 1) * mag;
+
+  ctx.save();
+  try { ctx.translate(ox, oy); cb(); }
+  finally { ctx.restore(); }                  // always restore!
 }
+
 function drawHexGrid(x, y, w, hgt, spacing = 36, color = 'rgba(120,170,255,0.06)') {
   ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1; const r = spacing / 2; const hstep = r * Math.sqrt(3);
   for (let row = -2; row < hgt / (1.5 * r) + 4; row++) {
@@ -526,7 +608,9 @@ function update(dt) {
         if (leftAfter >= 2) state.warnedLow = false;
       }
 
-      addRing(state.ball.x, state.ball.y, PAL.neutronGlow);
+      if (c.type === TYPES.FUEL) {
+        addRing(state.ball.x, state.ball.y, PAL.fuelGlow);  // expanding ring
+      }
       burst(state.ball.x, state.ball.y, PAL.neutronGlow, 14 + state.multiplier * 4, 160 + state.multiplier * 30);
       sfx.catch(c.type);
       if (state.mode !== 'practice' && state.multiplier >= 5 && state.fx.critical <= 0) { state.fx.critical = 0.8; state.fx.flash = 0.18; sfx.critical(); }
@@ -590,9 +674,9 @@ function drawControlsHint() {
   // Text lines
   const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const lines = !state.started
-    ? [isTouch ? 'Tap to start' : 'Click to start',
-       isTouch ? 'Tap left/right zones to tilt • Pause in menu' : '← → to tilt • P pause • M mute']
-    : [isTouch ? 'Tap left/right zones to tilt • Pause in menu' : '← → to tilt • P pause • M mute'];
+    ? [isTouch ? 'Tap to start/open menu' : 'Click to start/open menu',
+       isTouch ? 'Tap left/right zones below to tilt' : '← → to tilt']
+    : [isTouch ? 'Tap left/right zones below to tilt' : '← → to tilt'];
 
   // Draw onto the canvas
   const yBase = topH + midH - 16; // bottom of the middle (bar) area
@@ -626,24 +710,58 @@ function draw() {
   const columnWidth = Math.max(0, state.bar.length - 2 * edgeMargin);
   const colColor = state.fx.critical > 0 ? PAL.columnCritical : PAL.column;
   withShake(() => {
-    ctx.fillStyle = colColor; ctx.fillRect(cx - columnWidth / 2, 0, columnWidth, topH + midH);
-    drawHexGrid(cx - columnWidth / 2, 0, columnWidth, topH + midH, 34, state.fx.critical > 0 ? 'rgba(255,220,120,0.08)' : 'rgba(120,170,255,0.06)');
+    ctx.fillStyle = colColor;
+    ctx.fillRect(cx - columnWidth / 2, 0, columnWidth, topH + midH);
+    drawHexGrid(cx - columnWidth / 2, 0, columnWidth, topH + midH, 34,
+                state.fx.critical > 0 ? 'rgba(255,220,120,0.08)' : 'rgba(120,170,255,0.06)');
   });
+
+  withShake(() => {
+  for (const c of state.collectibles) {
+    if (c.type === TYPES.NEUTRON) drawGlowCircle(c.x, c.y, c.r, PAL.neutronCore, PAL.neutronGlow);
+    else if (c.type === TYPES.PHOTON) drawPhotonHex(c.x, c.y, c.r, PAL.photonCore, PAL.photonGlow);
+    else drawFuelPellet(c.x, c.y, c.r, PAL.fuelCore, PAL.fuelGlow);
+  }
+});
 
   const tintSteps = Math.min(Math.max(state.level - 1, 0), 5);
   if (state.mode === 'normal' && tintSteps > 0) { ctx.fillStyle = `rgba(255,60,60,${(0.03 * tintSteps).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
 
-  // ctx.fillStyle = 'rgba(255,255,255,0.40)'; ctx.font = '12px system-ui, sans-serif'; ctx.fillText('REACTOR RUSH — keep the chain alive', 10, 18);
-
+  // --- FX: particles + rings (glowy, lightweight) ---
   withShake(() => {
-    for (const c of state.collectibles) {
-      if (c.y < topH + midH + c.r) {
-        if (c.type === TYPES.NEUTRON) drawGlowCircle(c.x, c.y, c.r, PAL.neutronCore, PAL.neutronGlow);
-        else if (c.type === TYPES.PHOTON) drawPhotonHex(c.x, c.y, c.r, PAL.photonCore, PAL.photonGlow);
-        else drawFuelPellet(c.x, c.y, c.r, PAL.fuelCore, PAL.fuelGlow);
+    // rings (expanding circles)
+    if (state.fx.rings.length) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const r of state.fx.rings) {
+        ctx.globalAlpha = Math.max(0, r.alpha);
+        ctx.strokeStyle = r.color || 'rgba(185,220,255,0.7)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+        ctx.stroke();
       }
+      ctx.restore();
     }
-  });
+
+  // particles (tiny glow dots)
+  if (state.fx.particles.length) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of state.fx.particles) {
+      const t = Math.max(0, Math.min(1, p.life / p.maxLife));
+      const a = 1 - t;                           // fade out
+      const rad = 1.6 + 1.2 * (1 - t);           // slight size falloff
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color || 'rgba(185,243,255,0.9)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+});
+
 
   const { x: bx, y: by } = state.bar.center; const half = state.bar.length / 2; const ux = Math.cos(state.bar.angle), uy = Math.sin(state.bar.angle);
   const x1 = bx - ux * half, y1 = by + uy * half; const x2 = bx + ux * half, y2 = by - uy * half; const rodW = 12;
@@ -769,9 +887,10 @@ requestAnimationFrame(loop);
 // ---------- Share helpers (robust) ----------
 function shareText() {
   if (state.mode === 'daily') {
+    const n = dailyNumberToday();
     return state.challengeComplete
-      ? `I just completed the Daily Challenge on Reactor Rush! Play it here: ${SHARE_URL}`
-      : `I'm attempting today's Reactor Rush Daily! Play it here: ${SHARE_URL}`;
+      ? `I just completed Daily Challenge #${n} on Reactor Rush! Play it here: ${SHARE_URL}`
+      : `I'm attempting today's Reactor Rush Daily #${n}! Play it here: ${SHARE_URL}`;
   }
   return `I just scored ${state.score} on Reactor Rush! Play it here: ${SHARE_URL}`;
 }
@@ -809,3 +928,74 @@ canvas.addEventListener('pointerdown', () => { if (state.started && !state.runni
 
 // Initial hint
 setHint();
+
+// ---------- Daily countdown (America/New_York) + feedback links ----------
+const FEEDBACK_URL = 'https://docs.google.com/forms/d/15tmfye6Ra7GBAoHCVuTCNYh9vV35ZxziT97EgejOPkI';
+// Daily numbering base (NY time) — Daily #1
+const DAILY_BASE = '2025-08-28'; // <— set to TODAY when you deploy
+
+function nyNow() {
+  const d = new Date();
+  return new Date(d.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+}
+function daysUTC(y, m, d) { return Math.floor(Date.UTC(y, m - 1, d) / 86400000); }
+function ymdOfNY(dateNY) { return { y: dateNY.getFullYear(), m: dateNY.getMonth() + 1, d: dateNY.getDate() }; }
+function parseYMD(str) { const [y, m, d] = str.split('-').map(Number); return { y, m, d }; }
+
+function dailyNumberToday() {
+  const today = ymdOfNY(nyNow());
+  const base = parseYMD(DAILY_BASE);
+  return Math.max(1, daysUTC(today.y, today.m, today.d) - daysUTC(base.y, base.m, base.d) + 1);
+}
+
+
+function getNYNow() {
+  const d = new Date();
+  return new Date(d.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+}
+function secondsUntilNextNYMidnight() {
+  const ny = getNYNow();
+  const next = new Date(ny);
+  next.setDate(ny.getDate() + 1);
+  next.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.floor((next - ny) / 1000));
+}
+function formatHMS(s) {
+  const h = String(Math.floor(s / 3600)).padStart(2, '0');
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  return `${h}:${m}:${ss}`;
+}
+function updateDailyCountdownUI() {
+  const secs = secondsUntilNextNYMidnight();
+  const txt = formatHMS(secs);
+  // countdowns
+  const leftEl = document.getElementById('dailyCountdown');
+  const mobEl  = document.getElementById('dailyCountdownMobile');
+  if (leftEl) leftEl.textContent = txt;
+  if (mobEl)  mobEl.textContent = txt;
+
+  // daily number
+  const num = dailyNumberToday();
+  const n1 = document.getElementById('dailyNumber');
+  const n2 = document.getElementById('dailyNumberMobile');
+  if (n1) n1.textContent = String(num);
+  if (n2) n2.textContent = String(num);
+
+  // Optional: reseed at rollover if currently in Daily mode
+  if (secs === 0 && state?.mode === 'daily') startMode('daily');
+}
+
+function initDailyCountdownAndFeedback() {
+  // Wire feedback links (desktop + mobile)
+  const f1 = document.getElementById('feedbackLink');
+  const f2 = document.getElementById('feedbackLinkMobile');
+  if (f1) f1.href = FEEDBACK_URL;
+  if (f2) f2.href = FEEDBACK_URL;
+
+  // Start ticking countdown once per second
+  updateDailyCountdownUI();
+  setInterval(updateDailyCountdownUI, 1000);
+}
+
+initDailyCountdownAndFeedback();
