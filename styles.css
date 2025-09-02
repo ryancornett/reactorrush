@@ -1,7 +1,21 @@
 :root { --side-w: 25vw; --stage-w: 50vw; }
 * { box-sizing: border-box; }
-html, body { overflow: hidden; height: 100%; margin: 0; background: #0b0f18; color: #e8ecff; font-family: system-ui, ui-sans-serif, Segoe UI, Roboto, Helvetica, Arial; }
-h1 { display:flex; justify-content: center; align-items:center; gap:0.5rem; padding:0; margin:0;}
+html, body { overflow-x: hidden; min-height: 100%; margin: 0; background: #0b0f18; color: #e8ecff; font-family: system-ui, ui-sans-serif, Segoe UI, Roboto, Helvetica, Arial; }
+header { width: 100%; display:flex; justify-content: center;}
+h1 {
+  display:flex;
+  justify-content: center;
+  align-items:center;
+  gap:0.5rem;
+  padding:0;
+  margin:0;
+  background: #F9FF45;
+  background: linear-gradient(to right, #F9FF45 0%, #FF0819 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .shell { display: grid; grid-template-columns: var(--side-w) var(--stage-w) var(--side-w); width: 100vw; min-height: 100vh; }
 .side { padding: 16px; color: #c7d2ff; }
 .side h2 { margin: 12px 0 8px; font-size: 14px; color: #9fb0ff; letter-spacing: .02em; }

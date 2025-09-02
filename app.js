@@ -660,7 +660,7 @@ function levelUp() {
   const { x: cx, y: cy } = state.bar.center;
   addRing(cx, cy, 'rgba(255,235,150,0.65)');
   addRing(cx, cy, 'rgba(185,220,255,0.6)');
-  burst(cx, cy, 'rgba(255,220,120,0.85)', 28, 240);
+  burst(cx, cy, '#ffdc78d9', 28, 240);
   burst(cx, cy, 'rgba(155,185,255,0.85)', 20, 210);
 }
 
